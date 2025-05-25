@@ -1,0 +1,822 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NeuroDraw | Parkinson's Detection via Spiral Analysis</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Source+Code+Pro:wght@400;500&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary: #2563eb;
+            --primary-dark: #1d4ed8;
+            --primary-light: #93c5fd;
+            --secondary: #10b981;
+            --dark: #1e293b;
+            --light: #f8fafc;
+            --gray: #64748b;
+            --light-gray: #e2e8f0;
+            --alert: #ef4444;
+            --success: #10b981;
+            --warning: #f59e0b;
+            --radius: 12px;
+            --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+            --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+        }
+        
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+        
+        body {
+            font-family: 'Inter', sans-serif;
+            line-height: 1.6;
+            color: var(--dark);
+            background-color: var(--light);
+            -webkit-font-smoothing: antialiased;
+        }
+        
+        header {
+            background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+            color: white;
+            padding: 1.5rem 0;
+            box-shadow: var(--shadow);
+            position: relative;
+            overflow: hidden;
+        }
+        
+        header::after {
+            content: '';
+            position: absolute;
+            bottom: -50px;
+            left: 0;
+            right: 0;
+            height: 100px;
+            background: var(--light);
+            transform: skewY(-2deg);
+            z-index: 1;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 2rem;
+            position: relative;
+            z-index: 2;
+        }
+        
+        nav {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 3rem;
+        }
+        
+        .logo {
+            font-family: 'Source Code Pro', monospace;
+            font-size: 1.5rem;
+            font-weight: 500;
+            letter-spacing: -0.5px;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        
+        .logo-icon {
+            width: 28px;
+            height: 28px;
+            background-color: white;
+            border-radius: 6px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--primary);
+            font-weight: bold;
+        }
+        
+        .nav-links {
+            display: flex;
+            gap: 1.5rem;
+        }
+        
+        .nav-links a {
+            color: white;
+            text-decoration: none;
+            font-weight: 500;
+            font-size: 0.95rem;
+            letter-spacing: 0.5px;
+            transition: opacity 0.2s;
+            opacity: 0.9;
+        }
+        
+        .nav-links a:hover {
+            opacity: 1;
+        }
+        
+        .hero {
+            text-align: center;
+            padding: 2rem 0 4rem;
+            max-width: 800px;
+            margin: 0 auto;
+        }
+        
+        .hero h1 {
+            font-size: 2.75rem;
+            line-height: 1.2;
+            margin-bottom: 1.5rem;
+            font-weight: 700;
+            letter-spacing: -0.5px;
+        }
+        
+        .hero p {
+            font-size: 1.15rem;
+            color: rgba(255, 255, 255, 0.9);
+            margin-bottom: 2rem;
+        }
+        
+        section {
+            padding: 5rem 0;
+        }
+        
+        .section-title {
+            text-align: center;
+            margin-bottom: 3.5rem;
+        }
+        
+        .section-title h2 {
+            font-size: 2rem;
+            font-weight: 700;
+            color: var(--dark);
+            margin-bottom: 1rem;
+            position: relative;
+            display: inline-block;
+        }
+        
+        .section-title h2::after {
+            content: '';
+            position: absolute;
+            bottom: -8px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 60px;
+            height: 4px;
+            background: linear-gradient(90deg, var(--primary), var(--secondary));
+            border-radius: 2px;
+        }
+        
+        .section-title p {
+            color: var(--gray);
+            max-width: 600px;
+            margin: 0 auto;
+        }
+        
+        .detection-options {
+            display: flex;
+            justify-content: center;
+            gap: 2rem;
+            margin-top: 3rem;
+            flex-wrap: wrap;
+        }
+        
+        .option-card {
+            background: white;
+            border-radius: var(--radius);
+            padding: 2.5rem;
+            width: 100%;
+            max-width: 360px;
+            text-align: center;
+            box-shadow: var(--shadow);
+            transition: transform 0.3s, box-shadow 0.3s;
+            border: 1px solid var(--light-gray);
+        }
+        
+        .option-card:hover {
+            transform: translateY(-5px);
+            box-shadow: var(--shadow-lg);
+        }
+        
+        .option-card h3 {
+            color: var(--primary);
+            margin-bottom: 1rem;
+            font-size: 1.25rem;
+        }
+        
+        .option-card p {
+            color: var(--gray);
+            margin-bottom: 1.5rem;
+            font-size: 0.95rem;
+        }
+        
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            background: var(--primary);
+            color: white;
+            padding: 0.8rem 1.8rem;
+            border: none;
+            border-radius: var(--radius);
+            cursor: pointer;
+            text-decoration: none;
+            font-size: 0.95rem;
+            font-weight: 500;
+            transition: all 0.2s;
+            box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+        }
+        
+        .btn:hover {
+            background: var(--primary-dark);
+            transform: translateY(-1px);
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+        
+        .btn:active {
+            transform: translateY(0);
+        }
+        
+        .btn-outline {
+            background: transparent;
+            border: 2px solid var(--primary);
+            color: var(--primary);
+            box-shadow: none;
+        }
+        
+        .btn-outline:hover {
+            background: var(--primary);
+            color: white;
+        }
+        
+        .drawing-canvas {
+            border: 1px solid var(--light-gray);
+            border-radius: var(--radius);
+            margin: 1.5rem auto;
+            display: block;
+            background: white;
+            box-shadow: var(--shadow);
+        }
+        
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 100;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            overflow: auto;
+            background-color: rgba(0, 0, 0, 0.5);
+            backdrop-filter: blur(4px);
+        }
+        
+        .modal-content {
+            background-color: white;
+            margin: 5% auto;
+            padding: 2.5rem;
+            width: 90%;
+            max-width: 600px;
+            border-radius: var(--radius);
+            box-shadow: var(--shadow-lg);
+            position: relative;
+            animation: modalFadeIn 0.3s;
+        }
+        
+        @keyframes modalFadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        
+        .close {
+            position: absolute;
+            top: 1.25rem;
+            right: 1.5rem;
+            font-size: 1.5rem;
+            font-weight: bold;
+            color: var(--gray);
+            cursor: pointer;
+            transition: color 0.2s;
+        }
+        
+        .close:hover {
+            color: var(--dark);
+        }
+        
+        .modal-title {
+            color: var(--primary);
+            margin-bottom: 1.5rem;
+            text-align: center;
+            font-size: 1.5rem;
+        }
+        
+        .modal-instructions {
+            text-align: center;
+            color: var(--gray);
+            margin-bottom: 1.5rem;
+            font-size: 0.95rem;
+        }
+        
+        .result {
+            padding: 1.5rem;
+            margin: 1.5rem 0;
+            border-radius: var(--radius);
+            text-align: center;
+            font-weight: 500;
+            border-left: 4px solid;
+        }
+        
+        .healthy {
+            background-color: rgba(16, 185, 129, 0.1);
+            border-color: var(--success);
+            color: var(--success);
+        }
+        
+        .parkinson {
+            background-color: rgba(239, 68, 68, 0.1);
+            border-color: var(--alert);
+            color: var(--alert);
+        }
+        
+        .btn-group {
+            display: flex;
+            gap: 1rem;
+            justify-content: center;
+            margin-top: 1.5rem;
+        }
+        
+        .file-upload {
+            border: 2px dashed var(--light-gray);
+            border-radius: var(--radius);
+            padding: 2rem;
+            text-align: center;
+            margin-bottom: 1.5rem;
+            transition: border-color 0.2s;
+        }
+        
+        .file-upload:hover {
+            border-color: var(--primary-light);
+        }
+        
+        .file-upload p {
+            color: var(--gray);
+            font-size: 0.9rem;
+            margin-top: 0.5rem;
+        }
+        
+        .analysis-loading {
+            display: inline-block;
+            width: 18px;
+            height: 18px;
+            border: 3px solid rgba(37, 99, 235, 0.2);
+            border-radius: 50%;
+            border-top-color: var(--primary);
+            animation: spin 1s linear infinite;
+            margin-right: 8px;
+            vertical-align: middle;
+        }
+        
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        
+        footer {
+            background: var(--dark);
+            color: white;
+            padding: 4rem 0 2rem;
+            position: relative;
+        }
+        
+        footer::before {
+            content: '';
+            position: absolute;
+            top: -50px;
+            left: 0;
+            right: 0;
+            height: 100px;
+            background: var(--light);
+            transform: skewY(2deg);
+            z-index: 1;
+        }
+        
+        .footer-content {
+            position: relative;
+            z-index: 2;
+            text-align: center;
+        }
+        
+        .footer-logo {
+            font-family: 'Source Code Pro', monospace;
+            font-size: 1.25rem;
+            margin-bottom: 1.5rem;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        
+        .footer-logo-icon {
+            width: 24px;
+            height: 24px;
+            background-color: white;
+            border-radius: 4px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--primary);
+            font-weight: bold;
+            font-size: 0.8rem;
+        }
+        
+        .footer-links {
+            display: flex;
+            justify-content: center;
+            gap: 1.5rem;
+            margin-bottom: 1.5rem;
+        }
+        
+        .footer-links a {
+            color: rgba(255, 255, 255, 0.8);
+            text-decoration: none;
+            font-size: 0.9rem;
+            transition: color 0.2s;
+        }
+        
+        .footer-links a:hover {
+            color: white;
+        }
+        
+        .copyright {
+            color: rgba(255, 255, 255, 0.6);
+            font-size: 0.85rem;
+            margin-top: 2rem;
+        }
+        
+        @media (max-width: 768px) {
+            .hero h1 {
+                font-size: 2.25rem;
+            }
+            
+            .hero p {
+                font-size: 1rem;
+            }
+            
+            .section-title h2 {
+                font-size: 1.75rem;
+            }
+            
+            .option-card {
+                padding: 2rem;
+            }
+            
+            .modal-content {
+                padding: 1.5rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <div class="container">
+            <nav>
+                <div class="logo">
+                    <span class="logo-icon">ND</span>
+                    <span>NeuroDraw</span>
+                </div>
+                <div class="nav-links">
+                    <a href="#detection">Detection Tool</a>
+                    <a href="#research">Research</a>
+                </div>
+            </nav>
+            <div class="hero">
+                <h1>Parkinson's Detection Through Spiral Analysis</h1>
+                <p>An AI-powered tool analyzing hand-drawn spirals for early signs of Parkinson's disease</p>
+                <a href="#detection" class="btn">Try Detection Tool</a>
+            </div>
+        </div>
+    </header>
+
+    <section id="detection">
+        <div class="container">
+            <div class="section-title">
+                <h2>Parkinson's Detection Tool</h2>
+                <p>Our machine learning model analyzes spiral drawings for micrographia and tremor patterns associated with Parkinson's disease</p>
+            </div>
+            
+            <div class="detection-options">
+                <div class="option-card">
+                    <h3>Draw a Spiral</h3>
+                    <p>Use your input device to draw a spiral in real-time for immediate analysis</p>
+                    <button class="btn" onclick="openDrawingModal()">Begin Drawing Test</button>
+                </div>
+                <div class="option-card">
+                    <h3>Upload Spiral Image</h3>
+                    <p>Upload an existing image of a hand-drawn spiral for computational analysis</p>
+                    <button class="btn btn-outline" onclick="openUploadModal()">Upload Image</button>
+                </div>
+            </div>
+            
+            <div style="text-align: center; margin-top: 3rem; color: var(--gray); font-size: 0.9rem;">
+                <p>Note: This tool is for research purposes only and not a medical diagnosis</p>
+            </div>
+        </div>
+    </section>
+
+    <section id="research" style="background-color: #f1f5f9;">
+        <div class="container">
+            <div class="section-title">
+                <h2>Research Overview</h2>
+                <p>Our approach combines machine learning with clinical neuroscience for early Parkinson's detection</p>
+            </div>
+            
+            <div style="max-width: 800px; margin: 0 auto; text-align: center; color: var(--gray);">
+                <p>This research focuses on developing non-invasive, accessible methods for early Parkinson's disease detection using computational analysis of drawing tasks.</p>
+                <p style="margin-top: 1.5rem;">It's tool version 0 and We have An Amazing Futter Work .</p>
+            </div>
+        </div>
+    </section>
+
+    <!-- Drawing Modal -->
+    <div id="drawingModal" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="closeModal('drawingModal')">&times;</span>
+            <h3 class="modal-title">Spiral Drawing Test</h3>
+            <p class="modal-instructions">Draw a spiral starting from the center moving outward. Maintain consistent spacing between rotations.</p>
+            
+            <canvas id="spiralCanvas" class="drawing-canvas" width="500" height="500"></canvas>
+            
+            <div class="btn-group">
+                <button class="btn btn-outline" onclick="clearCanvas()">Clear</button>
+                <button class="btn" onclick="analyzeDrawing()">Analyze Drawing</button>
+            </div>
+            
+            <div id="drawingResult" class="result" style="display: none;"></div>
+        </div>
+    </div>
+
+    <!-- Upload Modal -->
+    <div id="uploadModal" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="closeModal('uploadModal')">&times;</span>
+            <h3 class="modal-title">Spiral Image Analysis</h3>
+            <p class="modal-instructions">Upload a clear image of a hand-drawn spiral for Parkinson's detection analysis</p>
+            
+            <div class="file-upload">
+                <input type="file" id="spiralUpload" accept="image/*" style="display: none;">
+                <button class="btn" onclick="document.getElementById('spiralUpload').click()">Select Image</button>
+                <p>JPG, PNG, or BMP (max 5MB)</p>
+            </div>
+            
+            <div id="uploadPreview" style="text-align: center; margin-bottom: 1.5rem;"></div>
+            
+            <button class="btn" onclick="analyzeUpload()" style="display: none; margin: 0 auto;" id="uploadBtn">Analyze Image</button>
+            
+            <div id="uploadResult" class="result" style="display: none;"></div>
+        </div>
+    </div>
+
+    <footer>
+        <div class="container">
+            <div class="footer-content">
+                <div class="footer-logo">
+                    <span class="footer-logo-icon">ND</span>
+                    <span>NeuroDraw</span>
+                </div>
+                <div class="footer-links">
+                    <a href="#detection">Detection Tool</a>
+                    <a href="#research">Research</a>
+                    <a href="https://www.parkinson.org" target="_blank">Resources</a>
+                    <a href="#">Contact</a>
+                </div>
+                <div class="copyright">
+                    <p>© 2023 NeuroDraw Research | Master's Thesis in Artificial Intelligence and Multimedia </p>
+                    <p style="margin-top: 0.5rem;">This tool is for research purposes only</p>
+                </div>
+            </div>
+        </div>
+    </footer>
+
+    <script>
+        // Modal functions
+        function openDrawingModal() {
+            document.getElementById('drawingModal').style.display = 'block';
+            initCanvas();
+        }
+        
+        function openUploadModal() {
+            document.getElementById('uploadModal').style.display = 'block';
+            document.getElementById('spiralUpload').addEventListener('change', handleUpload);
+        }
+        
+        function closeModal(id) {
+            document.getElementById(id).style.display = 'none';
+        }
+        
+        // Canvas drawing functionality
+        let canvas, ctx, isDrawing = false;
+        
+        function initCanvas() {
+            canvas = document.getElementById('spiralCanvas');
+            ctx = canvas.getContext('2d');
+            ctx.lineWidth = 2.5;
+            ctx.lineCap = 'round';
+            ctx.strokeStyle = '#2563eb';
+            ctx.fillStyle = 'white';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            
+            // Event listeners for drawing
+            canvas.addEventListener('mousedown', startDrawing);
+            canvas.addEventListener('mousemove', draw);
+            canvas.addEventListener('mouseup', stopDrawing);
+            canvas.addEventListener('mouseout', stopDrawing);
+            
+            // Touch support for mobile devices
+            canvas.addEventListener('touchstart', handleTouch);
+            canvas.addEventListener('touchmove', handleTouch);
+            canvas.addEventListener('touchend', stopDrawing);
+        }
+        
+        function startDrawing(e) {
+            isDrawing = true;
+            draw(e);
+        }
+        
+        function draw(e) {
+            if (!isDrawing) return;
+            
+            // Get mouse position
+            const rect = canvas.getBoundingClientRect();
+            let x, y;
+            
+            if (e.type.includes('touch')) {
+                x = e.touches[0].clientX - rect.left;
+                y = e.touches[0].clientY - rect.top;
+            } else {
+                x = e.clientX - rect.left;
+                y = e.clientY - rect.top;
+            }
+            
+            ctx.lineTo(x, y);
+            ctx.stroke();
+            ctx.beginPath();
+            ctx.moveTo(x, y);
+        }
+        
+        function handleTouch(e) {
+            e.preventDefault();
+            if (e.type === 'touchstart') {
+                startDrawing(e);
+            } else if (e.type === 'touchmove') {
+                draw(e);
+            }
+        }
+        
+        function stopDrawing() {
+            isDrawing = false;
+            ctx.beginPath();
+        }
+        
+        function clearCanvas() {
+            ctx.fillStyle = 'white';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            document.getElementById('drawingResult').style.display = 'none';
+        }
+        
+        // Upload functionality
+        function handleUpload(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+            
+            if (file.size > 5 * 1024 * 1024) {
+                alert('Please select an image smaller than 5MB');
+                return;
+            }
+            
+            const reader = new FileReader();
+            reader.onload = function(event) {
+                const preview = document.getElementById('uploadPreview');
+                preview.innerHTML = `
+                    <div style="border: 1px solid var(--light-gray); border-radius: var(--radius); padding: 1rem; display: inline-block;">
+                        <img src="${event.target.result}" style="max-width: 100%; max-height: 300px; display: block; border-radius: 6px;">
+                        <p style="margin-top: 0.5rem; color: var(--gray); font-size: 0.9rem;">${file.name}</p>
+                    </div>
+                `;
+                document.getElementById('uploadBtn').style.display = 'block';
+                document.getElementById('uploadResult').style.display = 'none';
+            }
+            reader.readAsDataURL(file);
+        }
+        
+        // Analysis functions
+        async function analyzeDrawing() {
+            const resultElement = document.getElementById('drawingResult');
+            resultElement.innerHTML = '<span class="analysis-loading"></span> Analyzing drawing...';
+            resultElement.style.display = "block";
+            resultElement.className = "result";
+            
+            try {
+                // Convert canvas to blob
+                const blob = await new Promise(resolve => {
+                    canvas.toBlob(resolve, 'image/png');
+                });
+                
+                // Create FormData and append the image
+                const formData = new FormData();
+                formData.append('file', blob, 'spiral.png');
+                
+                // Send to your Flask backend
+                const response = await fetch('/predict', {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                if (!response.ok) {
+                    throw new Error('Analysis failed');
+                }
+                
+                const data = await response.json();
+                
+                // Display results
+                if (data.prediction === 1) {
+                    resultElement.innerHTML = `
+                        <h4 style="margin-bottom: 0.5rem;">Analysis Result: Potential Parkinson's Indicators</h4>
+                        <p style="font-weight: 400;">Probability: ${(data.probabilities.Parkinson * 100).toFixed(1)}%</p>
+                        <p style="font-weight: 400;">Please consult a neurologist for clinical evaluation.</p>
+                    `;
+                    resultElement.className = "result parkinson";
+                } else {
+                    resultElement.innerHTML = `
+                        <h4 style="margin-bottom: 0.5rem;">Analysis Result: Normal Spiral Pattern</h4>
+                        <p style="font-weight: 400;">Probability: ${(data.probabilities.Healthy * 100).toFixed(1)}%</p>
+                        <p style="font-weight: 400;">No significant tremor or micrographia detected.</p>
+                    `;
+                    resultElement.className = "result healthy";
+                }
+            } catch (error) {
+                resultElement.innerHTML = `
+                    <h4 style="margin-bottom: 0.5rem;">Analysis Error</h4>
+                    <p style="font-weight: 400;">Could not complete analysis. Please try again.</p>
+                `;
+                resultElement.className = "result";
+                console.error('Analysis error:', error);
+            }
+        }
+        
+        async function analyzeUpload() {
+            const resultElement = document.getElementById('uploadResult');
+            resultElement.innerHTML = '<span class="analysis-loading"></span> Processing image...';
+            resultElement.style.display = "block";
+            resultElement.className = "result";
+            
+            const fileInput = document.getElementById('spiralUpload');
+            if (!fileInput.files[0]) return;
+            
+            try {
+                const formData = new FormData();
+                formData.append('file', fileInput.files[0]);
+                
+                // Send to your Flask backend
+                const response = await fetch('/predict', {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                if (!response.ok) {
+                    throw new Error('Analysis failed');
+                }
+                
+                const data = await response.json();
+                
+                // Display results
+                if (data.prediction === 1) {
+                    resultElement.innerHTML = `
+                        <h4 style="margin-bottom: 0.5rem;">Analysis Result: Abnormal Spiral Characteristics</h4>
+                        <p style="font-weight: 400;">Probability: ${(data.probabilities.Parkinson * 100).toFixed(1)}%</p>
+                        <p style="font-weight: 400;">Clinical correlation recommended.</p>
+                    `;
+                    resultElement.className = "result parkinson";
+                } else {
+                    resultElement.innerHTML = `
+                        <h4 style="margin-bottom: 0.5rem;">Analysis Result: Normal Spiral Characteristics</h4>
+                        <p style="font-weight: 400;">Probability: ${(data.probabilities.Healthy * 100).toFixed(1)}%</p>
+                        <p style="font-weight: 400;">No significant Parkinson's markers detected.</p>
+                    `;
+                    resultElement.className = "result healthy";
+                }
+            } catch (error) {
+                resultElement.innerHTML = `
+                    <h4 style="margin-bottom: 0.5rem;">Analysis Error</h4>
+                    <p style="font-weight: 400;">Could not complete analysis. Please try again.</p>
+                `;
+                resultElement.className = "result";
+                console.error('Analysis error:', error);
+            }
+        }
+    </script>
+</body>
+</html>
